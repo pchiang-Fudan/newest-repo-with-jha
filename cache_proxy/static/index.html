@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Middle-Out Token Compression</title>
+    <script>
+      if (window.location.protocol === "file:") {
+        window.location.replace("http://127.0.0.1:8003/");
+      }
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #202124;
+        --muted: #5f6368;
+        --line: #dadce0;
+        --soft: #f8fafd;
+        --blue: #1a73e8;
+        --blue-dark: #1558b0;
+        --green: #188038;
+        --red: #b3261e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Arial, Helvetica, sans-serif;
+        color: var(--ink);
+        background: #fff;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 16px;
+        height: 56px;
+        padding: 0 24px;
+        font-size: 14px;
+      }
+
+      .topbar a {
+        color: var(--ink);
+        text-decoration: none;
+      }
+
+      .topbar a:hover {
+        text-decoration: underline;
+      }
+
+      main {
+        width: min(1360px, calc(100vw - 32px));
+        margin: 42px auto 48px;
+      }
+
+      .brand {
+        display: grid;
+        justify-items: center;
+        gap: 14px;
+        text-align: center;
+        margin-bottom: 26px;
+      }
+
+      .logo {
+        width: min(952px, 70%);
+        height: min(43.4vh, 532px);
+        border-radius: 8px;
+        object-fit: cover;
+        object-position: center;
+        border: 1px solid var(--line);
+        box-shadow: 0 2px 10px rgba(32, 33, 36, 0.16);
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: clamp(34px, 6vw, 64px);
+        line-height: 1.05;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      .brand-subtitle {
+        max-width: 780px;
+        margin: 0;
+        color: var(--muted);
+        font-size: clamp(15px, 2vw, 19px);
+        line-height: 1.45;
+      }
+
+      .searchbox {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        min-height: 58px;
+        border: 1px solid var(--line);
+        border-radius: 29px;
+        padding: 13px 18px;
+        box-shadow: 0 1px 6px rgba(32, 33, 36, 0.12);
+        transition: box-shadow 160ms ease, border-color 160ms ease;
+      }
+
+      .searchbox:focus-within {
+        border-color: transparent;
+        box-shadow: 0 2px 10px rgba(32, 33, 36, 0.2);
+      }
+
+      .sales-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 24px 0 22px;
+      }
+
+      .sales-stat {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        background: #f8fafd;
+        text-align: center;
+      }
+
+      .sales-stat strong {
+        display: block;
+        color: var(--blue);
+        font-size: clamp(24px, 4vw, 40px);
+        line-height: 1;
+        margin-bottom: 8px;
+      }
+
+      .sales-stat span {
+        color: #3c4043;
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .search-icon {
+        width: 21px;
+        height: 21px;
+        margin-top: 4px;
+        color: #9aa0a6;
+        flex: 0 0 auto;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 30px;
+        max-height: 180px;
+        resize: vertical;
+        border: 0;
+        outline: 0;
+        font: 16px/1.5 Arial, Helvetica, sans-serif;
+        color: var(--ink);
+      }
+
+      .actions {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin: 26px 0 20px;
+      }
+
+      button {
+        border: 1px solid #f8f9fa;
+        border-radius: 4px;
+        background: #f8f9fa;
+        color: #3c4043;
+        min-width: 126px;
+        height: 38px;
+        padding: 0 16px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        border-color: #dadce0;
+        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+      }
+
+      button.primary {
+        background: var(--blue);
+        border-color: var(--blue);
+        color: #fff;
+      }
+
+      button.primary:hover {
+        background: var(--blue-dark);
+        border-color: var(--blue-dark);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .settings {
+        display: none;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 0 auto;
+      }
+
+      .advanced {
+        margin-top: 8px;
+        text-align: center;
+      }
+
+      .advanced summary {
+        display: inline-block;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 13px;
+      }
+
+      .advanced[open] .settings {
+        display: grid;
+        margin-top: 14px;
+        text-align: left;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      input,
+      select {
+        width: 100%;
+        height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 0 10px;
+        color: var(--ink);
+        background: #fff;
+        font: 14px Arial, Helvetica, sans-serif;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 38px;
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .toggle input {
+        width: 16px;
+        height: 16px;
+      }
+
+      .status {
+        margin: 18px auto 0;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+
+      .status.good {
+        color: var(--green);
+      }
+
+      .status.bad {
+        color: var(--red);
+      }
+
+      .notice {
+        display: none;
+        margin: 18px auto 0;
+        border: 1px solid #f6d58c;
+        border-radius: 6px;
+        padding: 12px 14px;
+        background: #fff8e1;
+        color: #5f4700;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .notice.show {
+        display: block;
+      }
+
+      .result {
+        margin-top: 28px;
+        border-top: 1px solid var(--line);
+        padding-top: 22px;
+      }
+
+      .findings {
+        margin-top: 34px;
+        border-top: 1px solid var(--line);
+        padding-top: 28px;
+      }
+
+      .explainer {
+        margin-top: 34px;
+        border-top: 1px solid var(--line);
+        padding-top: 28px;
+      }
+
+      .explainer h2,
+      .findings h2 {
+        margin: 0 0 8px;
+        font-size: clamp(22px, 3vw, 32px);
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+
+      .explainer p,
+      .findings p {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .explainer-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .explainer-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        background: #fff;
+      }
+
+      .explainer-card h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+        line-height: 1.25;
+      }
+
+      .explainer-card p {
+        margin: 0;
+        font-size: 13px;
+      }
+
+      .tagline {
+        margin-top: 14px;
+        border-left: 4px solid var(--blue);
+        padding: 10px 12px;
+        background: #f8fafd;
+        color: #3c4043;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .adaptive-callout {
+        margin-top: 14px;
+        border: 1px solid #cde7d8;
+        border-radius: 8px;
+        padding: 14px;
+        background: #f1f8f4;
+      }
+
+      .adaptive-callout h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        line-height: 1.25;
+      }
+
+      .adaptive-callout p {
+        margin: 0;
+        color: #2f4f3a;
+        font-size: 14px;
+      }
+
+      .findings-table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: collapse;
+        background: #fff;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 13px 14px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+        line-height: 1.35;
+      }
+
+      th {
+        background: #f8fafd;
+        color: #3c4043;
+        font-weight: 700;
+      }
+
+      td.number,
+      th.number {
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .best-row td {
+        background: #f1f8f4;
+      }
+
+      .finding-note {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .finding-note strong {
+        color: var(--ink);
+      }
+
+      .answer {
+        white-space: pre-wrap;
+        font: 15px/1.55 Arial, Helvetica, sans-serif;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .pill {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 5px 10px;
+        color: var(--muted);
+        background: var(--soft);
+        font-size: 12px;
+      }
+
+      .json {
+        margin-top: 16px;
+        overflow: auto;
+        max-height: 320px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 12px;
+        background: #f8fafd;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        color: #263238;
+      }
+
+      .raw {
+        margin-top: 16px;
+      }
+
+      .raw summary {
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 13px;
+      }
+
+      @media (max-width: 720px) {
+        main {
+          margin-top: 22px;
+        }
+
+        .logo {
+          width: 70%;
+          height: min(36.4vh, 364px);
+        }
+
+        .sales-strip {
+          grid-template-columns: 1fr;
+        }
+
+        .settings {
+          grid-template-columns: 1fr;
+        }
+
+        .explainer-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .actions {
+          flex-wrap: wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="topbar" aria-label="Top navigation">
+      <a href="/health" target="_blank" rel="noreferrer">Health</a>
+      <a href="/docs" target="_blank" rel="noreferrer">API docs</a>
+    </nav>
+
+    <main>
+      <div class="brand" aria-label="Middle-Out Token Compression">
+        <img
+          class="logo"
+          src="/static/silicon_a.webp"
+          alt="Middle-out compression demo"
+          width="142"
+          height="142"
+        />
+        <h1>Middle-Out Token Compression</h1>
+        <p class="brand-subtitle">
+          Adaptive ML Token-Routing and Compression for Agentic-AI
+        </p>
+      </div>
+
+      <section class="sales-strip" aria-label="Cost reduction highlights">
+        <div class="sales-stat">
+          <strong>60x</strong>
+          <span>tokens cheaper than DeepSeek V4 Flash with cache disabled</span>
+        </div>
+        <div class="sales-stat">
+          <strong>30x</strong>
+          <span>tokens cheaper than DeepSeek V4 Flash with cache enabled</span>
+        </div>
+        <div class="sales-stat">
+          <strong>Self-Learning</strong>
+          <span>Continuously optimizes context sent to API</span>
+        </div>
+      </section>
+
+      <form id="chat-form">
+        <div class="searchbox">
+          <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M9.5 3a6.5 6.5 0 0 1 5.16 10.45l4.45 4.44-1.42 1.42-4.44-4.45A6.5 6.5 0 1 1 9.5 3m0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9"
+            />
+          </svg>
+          <textarea
+            id="prompt"
+            rows="1"
+            placeholder="Ask Middle-Out Token-Routing anything"
+            required
+          ></textarea>
+        </div>
+
+        <div class="actions">
+          <button class="primary" id="plan" type="button">Try compression</button>
+        </div>
+
+        <details class="advanced">
+          <summary>Advanced API settings</summary>
+          <section class="settings" aria-label="API settings">
+            <label>
+              Model
+              <input id="model" value="gpt-4.1-mini" autocomplete="off" />
+            </label>
+            <label>
+              Repository ID
+              <input id="repo-id" value="demo" autocomplete="off" />
+            </label>
+            <label>
+              Commit hash
+              <input id="commit-hash" value="abc123" autocomplete="off" />
+            </label>
+            <label>
+              Bearer token
+              <input id="token" type="password" autocomplete="off" placeholder="Only needed for protected API calls" />
+            </label>
+            <label>
+              Max tokens
+              <input id="max-tokens" type="number" min="1" max="4096" value="512" />
+            </label>
+            <label class="toggle">
+              <input id="adaptive" type="checkbox" checked />
+              Adaptive ML routing
+            </label>
+          </section>
+        </details>
+      </form>
+
+      <p id="status" class="status">Ready.</p>
+      <div id="notice" class="notice"></div>
+
+      <section class="result" aria-live="polite">
+        <div id="answer" class="answer"></div>
+        <div id="meta" class="meta"></div>
+        <details class="raw" id="raw" hidden>
+          <summary>Raw response</summary>
+          <pre id="json" class="json"></pre>
+        </details>
+      </section>
+
+      <section class="explainer" aria-label="Middle-Out Token-Routing explanation">
+        <h2>How Adaptive ML Token-Routing Works</h2>
+        <p>
+          Middle-Out learns which repo context matters, ranks it before each
+          model call, and sends fewer tokens to the API without retraining the LLM.
+        </p>
+
+        <div class="explainer-grid">
+          <div class="explainer-card">
+            <h3>1. Repo Signal Ingestion</h3>
+            <p>
+              Reads paths, symbols, tests, workflows, and task intent.
+            </p>
+          </div>
+          <div class="explainer-card">
+            <h3>2. Self-Learning Context Ranker</h3>
+            <p>
+              Scores files and snippets using repo-specific learned weights.
+            </p>
+          </div>
+          <div class="explainer-card">
+            <h3>3. Cache-Aware Prompt Geometry</h3>
+            <p>
+              Places stable context where provider caches can reuse it.
+            </p>
+          </div>
+          <div class="explainer-card">
+            <h3>4. Guardrailed Token Routing</h3>
+            <p>
+              Protects required files while choosing the lowest-cost context plan.
+            </p>
+          </div>
+        </div>
+
+        <div class="tagline">
+          Middle-Out Token-Routing is a modern token-layer analogue of middle-out
+          compression: adaptive ML compresses the context stream before it reaches
+          the model.
+        </div>
+
+        <div class="adaptive-callout">
+          <h3>Adaptive ML Repo Memory</h3>
+          <p>
+            Learns from accepted answers, repeated file usage, explicit file
+            references, and missing-context corrections. Common paths get cheaper;
+            risky tasks get more context.
+          </p>
+        </div>
+      </section>
+
+      <section class="findings" aria-label="Major benchmark findings">
+        <h2>Major Findings</h2>
+        <p>
+          Test bench: 20-round blended large-repo coding-agent workload.
+          Middle-Out preserved required-file recall at 10/10 while reducing
+          prompt-token cost.
+        </p>
+
+        <div class="findings-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>System</th>
+                <th class="number">Estimated token cost</th>
+                <th class="number">Reduction vs no cache</th>
+                <th class="number">Cost multiplier</th>
+                <th>Interpretation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>DeepSeek V4 Flash API, no cache</td>
+                <td class="number">$0.26154352</td>
+                <td class="number">Baseline</td>
+                <td class="number">1.00x</td>
+                <td>Raw prompt-token cost with no provider-side prompt caching.</td>
+              </tr>
+              <tr>
+                <td>DeepSeek V4 Flash API, internal caching</td>
+                <td class="number">$0.14744087</td>
+                <td class="number">43.6%</td>
+                <td class="number">1.77x cheaper</td>
+                <td>Native cache hits help, but agent prompts still leave substantial redundant context cost.</td>
+              </tr>
+              <tr class="best-row">
+                <td>Our Middle-Out Token-Routing with adaptive ML</td>
+                <td class="number">$0.00398779</td>
+                <td class="number">98.5%</td>
+                <td class="number">65.6x cheaper</td>
+                <td>Uses online ML ranking plus guardrails to route each task to a cheaper context plan.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="finding-note">
+          <strong>Bottom line:</strong> DeepSeek internal caching reduced cost by 43.6%.
+          Middle-Out adaptive ML Token-Routing reduced total token cost by 98.5%,
+          reaching 65.6x lower cost than the no-cache baseline and 37.0x lower
+          cost than DeepSeek cache-enabled serving on this test bench.
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const form = document.querySelector("#chat-form");
+      const promptEl = document.querySelector("#prompt");
+      const modelEl = document.querySelector("#model");
+      const repoEl = document.querySelector("#repo-id");
+      const commitEl = document.querySelector("#commit-hash");
+      const tokenEl = document.querySelector("#token");
+      const maxTokensEl = document.querySelector("#max-tokens");
+      const adaptiveEl = document.querySelector("#adaptive");
+      const statusEl = document.querySelector("#status");
+      const noticeEl = document.querySelector("#notice");
+      const answerEl = document.querySelector("#answer");
+      const metaEl = document.querySelector("#meta");
+      const rawEl = document.querySelector("#raw");
+      const jsonEl = document.querySelector("#json");
+      const planEl = document.querySelector("#plan");
+      let uiConfig = null;
+
+      tokenEl.value = localStorage.getItem("contextpilot_token") || "";
+      loadUiConfig();
+
+      tokenEl.addEventListener("input", () => {
+        localStorage.setItem("contextpilot_token", tokenEl.value.trim());
+      });
+
+      promptEl.addEventListener("input", () => {
+        promptEl.style.height = "auto";
+        promptEl.style.height = `${Math.min(promptEl.scrollHeight, 180)}px`;
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await planContext();
+      });
+
+      planEl.addEventListener("click", async () => {
+        await planContext();
+      });
+
+      async function planContext() {
+        await runRequest(
+          "/v1/demo/plan",
+          {
+            messages: [{ role: "user", content: promptEl.value.trim() }],
+          },
+          (payload) => {
+            const router = payload.adaptive_router && payload.adaptive_router.router;
+            answerEl.textContent = router
+              ? `Compressed context plan:\n\nSelected ${router.selected_paths.length} file(s):\n${router.selected_paths.join("\n") || "None"}\n\nEstimated prompt tokens: ${payload.usage_estimate.prompt_tokens}\nStrategy: ${router.strategy}`
+              : JSON.stringify(payload, null, 2);
+            renderMeta(payload);
+          }
+        );
+      }
+
+
+      async function runRequest(path, body, onSuccess, options = {}) {
+        if (options.requirePrompt !== false && !promptEl.value.trim()) {
+          setStatus("Type a prompt first.", "bad");
+          return;
+        }
+
+        setLoading(true);
+        answerEl.textContent = "";
+        metaEl.innerHTML = "";
+        rawEl.hidden = true;
+        jsonEl.textContent = "";
+
+        try {
+          const response = await fetch(path, {
+            method: "POST",
+            headers: requestHeaders(),
+            body: JSON.stringify(body),
+          });
+          const payload = await response.json();
+          jsonEl.textContent = JSON.stringify(payload, null, 2);
+          rawEl.hidden = false;
+
+          if (!response.ok) {
+            const detail = payload.detail || payload.error || response.statusText;
+            if (response.status === 401) {
+              throw new Error("Authorization required. Paste the bearer token into the Bearer token field.");
+            }
+            throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+          }
+
+          onSuccess(payload);
+          setStatus("Done.", "good");
+        } catch (error) {
+          answerEl.textContent = error.message;
+          setStatus("Request failed.", "bad");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function loadUiConfig() {
+        try {
+          const response = await fetch("/ui/config");
+          uiConfig = await response.json();
+          if (!uiConfig.has_api_key) {
+            setStatus("Ready.", "");
+          } else if (uiConfig.requires_public_token) {
+            noticeEl.textContent = `Connected to ${uiConfig.provider}. Protected API calls need the bearer token.`;
+            noticeEl.classList.add("show");
+          }
+        } catch (error) {
+          noticeEl.textContent = "Could not read server configuration.";
+          noticeEl.classList.add("show");
+        }
+      }
+
+      function requestHeaders() {
+        const headers = { "Content-Type": "application/json" };
+        const token = tokenEl.value.trim();
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+        return headers;
+      }
+
+      function cacheContextPayload() {
+        const repoId = repoEl.value.trim();
+        const commitHash = commitEl.value.trim();
+        if (!repoId || !commitHash) {
+          return null;
+        }
+        return {
+          repo_id: repoId,
+          commit_hash: commitHash,
+          context_budget: {
+            enabled: true,
+            mode: adaptiveEl.checked ? "adaptive-router" : "standard",
+          },
+        };
+      }
+
+      function renderMeta(payload) {
+        const cacheProxy = payload.cache_proxy || {};
+        const usage = payload.usage || payload.usage_estimate || {};
+        const adaptive = payload.adaptive_router || {};
+        const router = adaptive.router || {};
+        const items = [
+          cacheProxy.provider && `provider ${cacheProxy.provider}`,
+          Number.isFinite(cacheProxy.latency_ms) && `${Math.round(cacheProxy.latency_ms)} ms`,
+          Number.isFinite(cacheProxy.cache_hit_rate) &&
+            `cache hit ${(cacheProxy.cache_hit_rate * 100).toFixed(1)}%`,
+          usage.prompt_tokens && `${usage.prompt_tokens} prompt tokens`,
+          usage.completion_tokens && `${usage.completion_tokens} completion tokens`,
+          router.bucket && `route ${router.bucket}`,
+        ].filter(Boolean);
+
+        metaEl.innerHTML = items.map((item) => `<span class="pill">${escapeHtml(String(item))}</span>`).join("");
+      }
+
+      function setStatus(message, kind) {
+        statusEl.textContent = message;
+        statusEl.className = `status ${kind || ""}`.trim();
+      }
+
+      function setLoading(isLoading) {
+        planEl.disabled = isLoading;
+        setStatus(isLoading ? "Working..." : "Ready.");
+      }
+
+      function escapeHtml(value) {
+        return value.replace(/[&<>"']/g, (char) => {
+          return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;",
+          }[char];
+        });
+      }
+    </script>
+  </body>
+</html>

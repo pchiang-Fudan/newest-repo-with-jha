@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: middle-out-token-compression
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn cache_proxy.server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: CACHE_PROXY_PROVIDER
+        value: openai-compatible
+      - key: CACHE_PROXY_BASE_URL
+        value: https://api.openai.com
+      - key: CACHE_PROXY_DATA_DIR
+        value: /tmp/cache_proxy_data

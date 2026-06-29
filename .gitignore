@@ -1,0 +1,32 @@
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Runtime data and local secrets
+.env
+.env.*
+cache_proxy_data/
+*.sqlite3
+*.db
+
+# Large local experiments / downloaded model repos
+BitNet/
+vendor/
+
+# Build artifacts and logs
+build/
+dist/
+*.egg-info/
+*.log
+
+# Node/vendor build artifacts if added later
+node_modules/
+.next/
+coverage/
