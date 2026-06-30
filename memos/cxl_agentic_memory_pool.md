@@ -139,6 +139,45 @@ multiple CPU hosts
   -> partitioned/reassigned pooled DDR5 regions
 ```
 
+## Cloud Memory Pooling
+
+Before buying CXL hardware, run a cloud software proof that emulates the future
+pooled warm-memory tier.
+
+```text
+many ContextPilot agent workers
+  -> local L1 cache in each VM DRAM
+  -> shared L2 memory pool
+       Redis / Valkey / Tair / Dragonfly / Memcached / Ray object store
+  -> cold tier
+       S3 / OSS / EBS / NVMe
+  -> model API or GPU inference backend
+```
+
+This does not prove CXL latency or CXL enumeration. It proves the workload
+thesis:
+
+> Do fleets of coding agents working on shared repos reuse enough warm
+> project/session state to justify a hardware pooled-memory tier?
+
+Cloud Memory Pooling is useful because it is cheap, fast to deploy, and
+provider-agnostic. AWS, Alibaba Cloud, or another cloud can supply
+memory-optimized CPU workers plus a managed or self-hosted shared in-memory
+service. The shared pool stores repo indexes, symbol graphs, file snapshots,
+test logs, tool traces, prior patch candidates, session state, context plans,
+and prompt/prefix metadata.
+
+Compare:
+
+1. isolated workers with only local VM memory
+2. workers with local L1 memory plus shared cloud L2 memory
+
+If the shared L2 memory layer does not improve resume time, duplicate indexing,
+context assembly, token reuse, or active-agent density, CXL hardware is unlikely
+to be a strong product. If it does, the CXL DDR5 appliance becomes a lower
+latency, lower overhead physical implementation of the same memory-pooling
+concept.
+
 ## Metrics
 
 Track system value, not only token value:
@@ -166,18 +205,36 @@ Add a storage tier abstraction around ContextPilot state:
 Measure object sizes, access frequency, reuse distance, and resume latency.
 This produces the memory working-set profile before hardware exists.
 
-### Phase 2: Single-Host CXL FPGA Demo
+### Phase 2: Cloud Memory Pooling PoC
+
+Deploy several ContextPilot workers on cloud CPU instances. Add a shared memory
+pool using Redis, Valkey, Tair, Dragonfly, Memcached, or a Ray object store.
+Measure shared-state hit rate, duplicate recomputation avoided, resume time,
+context assembly latency, input tokens avoided, and active agents per worker.
+
+This is the first go/no-go gate for the CXL strategy.
+
+### Phase 3: Commercial CXL DDR5 Expander Demo
+
+Use one CXL-capable Gen5 server and a commercial CXL Type 3 DDR5 memory
+expander. Map selected warm ContextPilot state into the CXL memory region and
+compare against local DRAM-only and cloud-memory-pool operation.
+
+This proves whether the workload benefits from a real CXL memory tier before
+building custom FPGA hardware.
+
+### Phase 4: Single-Host CXL FPGA Demo
 
 Use one CXL-capable Gen5 server and an FPGA Type 3 endpoint with attached DDR5.
 Map selected warm ContextPilot state into the CXL memory region and compare
 against local DRAM-only operation.
 
-### Phase 3: Optical Link Demo
+### Phase 5: Optical Link Demo
 
 Insert an optical Gen5/CXL link between the host and the memory appliance.
 Re-run the same workload while tracking latency sensitivity and bandwidth use.
 
-### Phase 4: Multi-Host Pooled Memory Demo
+### Phase 6: Multi-Host Pooled Memory Demo
 
 Attach multiple CPU hosts. Partition or reassign pooled DDR5 regions across
 hosts. Demonstrate session resume or migration without rebuilding repo indexes

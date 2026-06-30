@@ -40,7 +40,8 @@ Demo target:
 ContextPilot-style CPU workers
   -> GPU inference API below
   -> local DRAM only baseline
-  -> compare with CXL pooled-DDR5 warm-state tier
+  -> cloud shared-memory pool proof
+  -> later CXL pooled-DDR5 warm-state tier
 ```
 
 Primary metrics:
@@ -55,6 +56,13 @@ Primary metrics:
 
 See `memos/cxl_agentic_memory_pool.md` for the full architecture and prototype
 plan.
+
+Cloud Memory Pooling is the first proof step. Run many ContextPilot workers on
+cloud CPU instances, give each worker a local L1 cache, and use Redis, Valkey,
+Tair, Dragonfly, Memcached, or a Ray object store as the shared L2 memory pool.
+This tests whether shared repo/session/project state improves resume time,
+duplicate indexing, context assembly latency, input tokens avoided, and active
+agent density before spending money on CXL hardware.
 
 ## MVP Flow
 
