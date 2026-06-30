@@ -8,6 +8,54 @@ is to make prompts more cacheable by putting stable repo/context blocks before
 volatile task-specific text, reduce unnecessary context with the adaptive
 router, and normalize provider cache telemetry.
 
+## Strategic Direction: Stateful Agentic AI Memory
+
+This project is also a workload and demo vehicle for an optically disaggregated
+commodity DDR5 memory pool for Gen5 CXL servers running stateful agentic AI.
+
+The near-term middleware reduces token cost by improving context routing. The
+larger infrastructure direction is to use ContextPilot-style coding agents as a
+memory-system workload:
+
+- GPU inference plane: H100/H20-class GPUs serve DeepSeek-V4-Flash or another
+  coding/agentic LLM, keeping model weights, active decode, and hot KV in HBM.
+- CPU agent-control plane: Gen5 CXL-capable hosts run planning, repo indexing,
+  retrieval, tool orchestration, terminal/test execution, workflow state,
+  session state, and prompt assembly.
+- Optical CXL fabric: CPU hosts connect over PCIe Gen5/CXL optical links to a
+  central memory appliance.
+- Central memory appliance: a CXL Type 3 FPGA prototype exposes pooled
+  commodity DDR5 now; an ASIC can follow later if the workload validates.
+
+Coding agents carry large warm state: repo indexes, AST/symbol graphs, file
+snapshots, terminal/test logs, search results, tool traces, agent plans,
+prompt/prefix caches, prior patch candidates, and long-lived session history.
+This state is expensive to recompute and bulky to duplicate per CPU node, but it
+does not need HBM latency. Pooled DDR5 can reduce local DRAM overprovisioning
+and increase active coding-agent sessions per CPU/GPU rack.
+
+Demo target:
+
+```text
+ContextPilot-style CPU workers
+  -> GPU inference API below
+  -> local DRAM only baseline
+  -> compare with CXL pooled-DDR5 warm-state tier
+```
+
+Primary metrics:
+
+- cost per active coding agent/session
+- project resume time
+- context assembly latency before LLM calls
+- cache hit rate for repo/index/session state
+- concurrent active agents per CPU/GPU rack
+- local DRAM saved per host
+- GPU utilization improvement from keeping CPU-side agent state warm
+
+See `memos/cxl_agentic_memory_pool.md` for the full architecture and prototype
+plan.
+
 ## MVP Flow
 
 ```text

@@ -172,6 +172,7 @@ pooled / optical / fabric memory:
   many-user KV
   cold context
   cross-request state
+  agent-control-plane warm state
 ```
 
 Potential benefit:
@@ -185,6 +186,15 @@ Risk:
 - does not reduce KV by itself
 - latency matters because decode is serial
 - requires scheduler and memory co-design
+
+For coding-agent workloads, pooled memory should not be limited to raw GPU-side
+KV. The CPU agent-control plane also creates large warm state: repo indexes,
+AST/symbol graphs, file snapshots, terminal logs, test logs, search results,
+tool traces, agent plans, prompt/prefix caches, prior patch candidates, and
+long-lived session history. This state can be too bulky to duplicate on every
+CPU host, but it does not need HBM latency. That makes it a strong candidate for
+commodity DDR5 behind a Gen5 CXL Type 3 memory appliance. See
+`memos/cxl_agentic_memory_pool.md`.
 
 ## Research Questions
 
@@ -297,4 +307,3 @@ compressed runtime memory
 
 Fixed low-bit weights may return later as an optimization. They are not the
 foundation.
-
